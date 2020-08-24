@@ -1,0 +1,77 @@
+<?php
+ 
+/**
+ * Implementation of hook_requirements().
+ *
+ * Verifies that PHP CURL library is installed on the server
+ */
+function uc_inovio_requirements($phase) {
+  $t = get_t();
+  $has_curl = function_exists('curl_init');
+ 
+  $requirements['uc_inovio_curl'] = [
+    'title' => $t('cURL'),
+    'value' => $has_curl ? $t('Enabled') : $t('Not found'),
+  ];
+
+  if (!$has_curl) {
+     $requirements['uc_inovio_curl']['severity'] = REQUIREMENT_ERROR;
+     $requirements['uc_inovio_curl']['description'] = $t("Inovio requires the PHP <a href='!curl_url'>cURL</a> library.", array('!curl_url' => 'http://php.net/manual/en/curl.setup.php'));
+  }
+ 
+  return $requirements;
+}
+ 
+/**
+ * Implements hook_uninstall().
+ *
+ * Uninstalls all variables set by the uc_inovio module.
+ */
+function uc_inovio_uninstall() {
+  // Delete related variables all at once.
+
+    db_delete('variable')
+      ->condition('name', 'uc_inovio_%', 'LIKE')
+      ->execute();
+
+    // Drop table onuninstall module
+    $sql = "DROP TABLE IF EXISTS inovio_refunded";
+    Database::getConnection()->query($sql);
+}
+
+/**
+ *Implements hook_schema().
+ */
+function uc_inovio_schema() {
+
+  // Create table for refund functionality
+  $sql = "CREATE TABLE IF NOT EXISTS {uc_inovio_refund} (
+                  id bigint(20) NOT NULL AUTO_INCREMENT,
+                  inovio_order_id bigint(20) NOT NULL,
+                  inovio_api_po_id varchar(256),
+                  total_order_amount varchar(256),
+                  PRIMARY KEY  (id)
+                ) ENGINE=MyISAM DEFAULT CHARSET=latin1 AUTO_INCREMENT=1 ;";
+
+    Database::getConnection()->query($sql);
+  
+
+    $schema = array();
+    /* select inovio_refunded order status if not exist then insert the order status into table */
+    $data = db_query(
+                "SELECT state FROM {uc_order_statuses} WHERE order_status_id = :order_status_id", array(':order_status_id' => 'inovio_refunded'
+              )
+            )->fetchField();
+    
+    if($data == '') {
+        db_insert('uc_order_statuses')->fields(array(
+            'order_status_id' => t('inovio_refunded'),
+            'title' => t('Inovio Refund'),   
+            'state' => t('inovio_refunded'),
+            'weight' => t('-30'),  
+            'locked' => 1,  
+          ))->execute();
+    } 
+
+    return $schema;
+}

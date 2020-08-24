@@ -1,0 +1,1103 @@
+<?php
+
+/**
+ * @file
+ * Integrates the nabinovio.com Hosted Payment Pages service with Ubercart.
+ *
+ */
+
+
+/** Authorize and capture money all at once. */
+define('UC_INOVIO_AUTH_CAPTURE', 'auth_capture');
+
+
+/** Name of encryption key file. */
+define('UC_INOVIO_KEYFILE_NAME', 'uc_credit.key');
+
+/**
+ * Implements hook_init().
+ */
+function uc_inovio_init() {
+    global $conf;
+    $conf['i18n_variables'][] = 'uc_credit_fail_message';
+    $conf['i18n_variables'][] = 'uc_credit_policy';
+    drupal_add_js(drupal_get_path('module', 'uc_inovio') . '/uc_inovio.js', array(
+        'scope' => 'footer',
+        'every_page' => TRUE,
+        'weight' => -1
+    ));
+
+}
+
+/**
+ * Implements hook_exit().
+ */
+function uc_inovio_exit() {
+  // Make sure sensitive checkout session data doesn't persist on other pages.
+  if (isset($_SESSION['sescrd'])) {
+    if (isset($_GET['q'])) {
+      // Separate the args ourself since the arg() function may not be loaded.
+      $args = explode('/', $_GET['q']);
+      if (!isset($args[1]) || $args[1] != 'checkout') {
+        unset($_SESSION['sescrd']);
+      }
+    }
+    else {
+      unset($_SESSION['sescrd']);
+    }
+  }
+}
+
+/**
+ * Implements hook_uc_payment_gateway().
+ */
+function uc_inovio_uc_payment_gateway() {
+    $gateways['inovio'] = array(
+      'title'            => t('Inovio'),
+      'description'      => t('Process credit card payments via Inovio gateway.'),
+      'settings'         => '', 
+      'credit'           => 'uc_inovio_charge',
+      'credit_txn_types' => array(UC_INOVIO_AUTH_CAPTURE),
+    );
+    return $gateways;
+}
+
+function uc_inovio_charge($order_id, $amount, $data) {
+    
+    global $user;
+   
+    // Load the order.
+    $order = uc_order_load($order_id);
+
+     try{
+        // Restrict Product quantity
+        if(restrict_quantity($order) === FALSE){
+           drupal_set_message( "For single product quantity should not be greater than " . variable_get('uc_inovio_product_quantity_restriction')." ,please update product's quantity", "error" );
+            drupal_goto('cart/');
+            return FALSE;
+
+        }
+
+        // Merchant authentication
+        if (merchant_authenticate() === FALSE) {
+            //drupal_set_message('Somethig went wrong, please contact to your service provider.','error');
+            throw new Exception('Somsadasethig went wrong, please contact to your service provider.');
+           
+        }
+       
+        $final_params = array_merge(
+                        set_gateway_information(),
+                        prepareRequestData($order),
+                        getProductIds($order)
+                ) + get_advaceparam();
+
+        $parse_result = set_apimethod_and_getresponse('authAndCapture', $final_params);
+
+        uc_inovio_logger($parse_result);
+
+        if (isset($parse_result->TRANS_STATUS_NAME) && 'APPROVED' == $parse_result->TRANS_STATUS_NAME) {
+
+              /* Add comment in for payent successfully */
+                $message = t('Type: @type<br />Txn ID: @id',
+                              array(
+                                '@type' => UC_INOVIO_AUTH_CAPTURE,
+                                '@id' => $parse_result->PO_ID
+                              )
+                            );
+                $result = array(
+                  'success' => TRUE,
+                  'comment' => $message,
+                  'message' => 'Payment successfully completed using Inovio payment method',
+                  'data'    =>  array('module' => 'uc_inovio', 'txn_type' => UC_INOVIO_AUTH_CAPTURE, 'txn_id' => 
+                                    $parse_result->PO_ID
+                                ),
+                  'uid'     => $user->uid
+                );
+                
+                uc_inovio_log_prior_auth_capture($order->order_id, NULL);
+                
+                // Build an admin order comment.
+                $comment = t("Payment successfully completed using Inovio payment method -"
+                        . " Transaction-Id- ".$parse_result->PO_ID);
+
+                // Save the comment to the order.
+                uc_order_comment_save($order->order_id, $user->uid, $comment, 'order','payment_received');
+                
+                // Add extra information in inovio refund table for refund functionality
+                db_insert('uc_inovio_refund')->fields(
+                        array(
+                            'inovio_order_id' => $order->order_id,
+                            'inovio_api_po_id' => $parse_result->PO_ID,   
+                            'total_order_amount' => $parse_result->TRANS_VALUE_SETTLED
+                        )
+                )->execute();
+
+                
+                return $result;
+        }
+
+        // Check card length
+        else if (isset($parse_result->REF_FIELD) && 'pmt_numb' == strtolower($parse_result->REF_FIELD)) {
+            drupal_set_message('Somethig went wrong, please contact to your service provider.');
+
+            return FALSE;
+        }
+        // Check card expiry date
+        else if (isset($parse_result->REF_FIELD) && 'pmt_expiry' == strtolower($parse_result->REF_FIELD)) {
+            drupal_set_message('Somethig went wrong, please contact to your service provider.');
+
+            return FALSE;
+        }
+        // Check card expiry key
+        else if (isset($parse_result->REF_FIELD) && 'pmt_key' == strtolower($parse_result->REF_FIELD)) {
+
+            drupal_set_message('Somethig went wrong, please contact to your service provider.');
+        }
+        // Check API Advice, Service Advice and Transaction status 
+        else if (isset($parse_result->SERVICE_RESPONSE) && $parse_result->SERVICE_RESPONSE == 500 && !empty($parse_result->SERVICE_ADVICE)) {
+           drupal_set_message('Somethig went wrong, please contact to your service provider.');
+        } else {
+            drupal_set_message('Something went wrong,please contact to your service provider.');
+        }
+
+      }
+      catch(Exception $ex){
+           drupal_set_message($ex->getMessage(),'error');
+        return FALSE;
+      }
+
+
+}
+
+
+/**
+ * Implements hook_uc_payment_method().
+ */
+function uc_inovio_uc_payment_method() {
+
+     $title = t(!empty(variable_get('uc_inovio_checkout_label')) ? variable_get('uc_inovio_checkout_label'): 'Inovio Payment Gateway');
+
+    $title .= theme('image', array(
+        'path' => drupal_get_path('module', 'uc_inovio') . '/image/inovio_cards.png',
+        'attributes' => array('class' => array('inovio-logo')),
+    ));
+
+
+    $methods['inovio'] = array(
+        'name'     => t('inovio'),
+        'title'    => $title,
+        'desc'     => t('Pay with inovio payment gateway.'),
+        'callback' => 'uc_payment_method_inovio',
+        'weight'   => 1,
+        'checkout' => TRUE,
+    );
+    return $methods;
+}
+
+/**
+ * Callback function for the Credit Card payment method.
+ */
+function uc_payment_method_inovio($op, &$order, $form = NULL, &$form_state = NULL) {
+    
+    switch ($op) {
+        case 'cart-details':
+            $details = uc_payment_method_inovio_form(array(), $form_state, $order);
+            return $details;
+
+        case 'cart-process':
+            if (!isset($form_state['values']['panes']['payment']['details']['cc_number'])) {
+              return;
+            }
+            // Fetch the CC details from the $_POST directly.
+            $cc_data = $form_state['values']['panes']['payment']['details'];
+
+            $cc_data['cc_number'] = str_replace(' ', '', $cc_data['cc_number']);
+
+            array_walk($cc_data, 'check_plain');
+
+            // Recover cached CC data in
+            if (isset($form_state['values']['panes']['payment']['details']['payment_details_data'])) {
+                $cache = uc_credit_cache('save', $form_state['values']['panes']['payment']['details']['payment_details_data']);
+            }
+
+            // Go ahead and put the CC data in the payment details array.
+            $order->payment_details = $cc_data;
+
+            // Default our value for validation.
+            $return = TRUE;
+
+            // Validate the CC number if that's turned on/check for non-digits.
+            if (!_uc_inovio_valid_card_number($cc_data['cc_number']) || !ctype_digit($cc_data['cc_number'])) {
+                form_set_error('panes][payment][details][cc_number', t('You have entered an invalid credit card number.'));
+                $return = FALSE;
+            }
+
+            // Validate the card expiration date.
+            if (!uc_inovio_valid_card_expiration($cc_data['cc_exp_month'], $cc_data['cc_exp_year'])) {
+                form_set_error('panes][payment][details][cc_exp_month', t('The credit card you entered has expired.'));
+                form_set_error('panes][payment][details][cc_exp_year');
+                $return = FALSE;
+            }
+
+            // Validate the CVV number if enabled.
+            if (!uc_inovio_valid_cvv($cc_data['cc_cvv'])) {
+                form_set_error('panes][payment][details][cc_cvv', t('You have entered an invalid CVV number.'));
+                $return = FALSE;
+            }
+
+            $key = uc_inovio_encryption_key();
+            $crypt = new UbercartEncryption();
+            // Store the encrypted details in the session for the next pageload.
+            // We are using base64_encode() because the encrypt function works with a
+            // limited set of characters, not supporting the full Unicode character
+            // set or even extended ASCII characters that may be present.
+            // base64_encode() converts everything to a subset of ASCII, ensuring that
+            // the encryption algorithm does not mangle names.
+            $_SESSION['sescrd'] = $crypt->encrypt($key , base64_encode(serialize($order->payment_details)));
+            
+            // Log any errors to the watchdog.
+            uc_store_encryption_errors($crypt, 'uc_credit');
+
+            // If we're going to the review screen, set a variable that lets us know
+            // we're paying by CC.
+            if ($return) {
+                $_SESSION['cc_pay'] = TRUE;
+            }
+
+            return $return;
+
+        case 'cart-review':
+
+            if(isset($_SESSION['sescrd'])) {
+                $key = uc_inovio_encryption_key();
+                $crypt = new UbercartEncryption();
+                $order->payment_details = unserialize(base64_decode($crypt->decrypt($key, $_SESSION['sescrd'])));
+                $review[] = array('title' => t('Card number'), 'data' => uc_inovio_display_number($order->payment_details['cc_number']));
+                $review[] = array('title' => t('Expiration'), 'data' => $order->payment_details['cc_exp_month'] . '/' . $order->payment_details['cc_exp_year']);
+
+                return $review;
+            } else {
+                return NULL;  
+            } 
+
+        case 'order-view':
+           // this section use for admin view an order
+            $build = array();
+
+            return $build;
+
+        case 'customer-view':
+            // this section use for customer view our order
+            $build = array();
+
+            if (!empty($order->payment_details['cc_number'])) {
+                $build['#markup'] = t('Card number') . ':<br />' . uc_credit_display_number($order->payment_details['cc_number']);
+            }
+            return $build;
+
+        case 'order-details': 
+            
+            return t('Use the terminal available through the<br />%button button on the View tab to<br />process credit card payments.', array('%button' => t('Process card Inovio')));
+
+        case 'settings':
+            // for admin configuration form
+             form_load_include($form_state, 'inc', 'uc_inovio', 'uc_inovio.admin');
+            return uc_inovio_admin_settings_form($form, $form_state);
+    }
+}
+
+/**
+ * Displays the credit card details form on the checkout screen.
+ */
+function uc_payment_method_inovio_form($form, &$form_state, $order) {
+     
+    // Normally the CC data is posted in via AJAX.
+    if (!empty($form_state['values']['payment_details_data']) && arg(0) == 'cart') {
+        $order->payment_details = uc_inovio_cache('save', $form_state['values']['payment_details_data']);
+    }
+
+    // But we have to accommodate failed checkout form validation here.
+    if (isset($_SESSION['sescrd'])) {
+        $order->payment_details = uc_inovio_cache('save', $_SESSION['sescrd']);
+        unset($_SESSION['sescrd']);
+    }
+
+    if (!isset($order->payment_details) && isset($form_state['values']['panes']['payment']['details'])) {
+        $order->payment_details = $form_state['values']['panes']['payment']['details'];
+        $order->payment_details['cc_number'] = str_replace(' ', '', $order->payment_details['cc_number']);
+    }
+
+    if (!isset($order->payment_details)) {
+        $order->payment_details = array();
+    }
+
+    $form['#attached']['css'] = array(
+        drupal_get_path('module', 'uc_inovio') . '/uc_inovio.css',
+    );
+
+    $types = array('Visa' => t('Visa'), 'MasterCard' => t('MasterCard'), 'Discover' => t('Discover'), 'AmericanExpress' => t('American Express'));
+
+    // Set up the card type choose on credit card form.
+    if ($types) {
+        $form['cc_type'] = array(
+            '#type'          => 'select',
+            '#title'         => t('Card type'),
+            '#options'       => drupal_map_assoc($types),
+            '#default_value' => isset($order->payment_details['cc_type']) ? $order->payment_details['cc_type'] : NULL,
+        );
+    }
+
+    // Set up the default CC number on the credit card form.
+    if (isset($_SESSION['clear_cc']) || !isset($order->payment_details['cc_number'])) {
+        $default_num = NULL;
+    }
+    elseif (!_uc_inovio_valid_card_number($order->payment_details['cc_number'])) {
+        // Display the number as is if it does not validate so it can be corrected.
+        $default_num = $order->payment_details['cc_number'];
+    }
+    else {
+        // Otherwise default to the last 4 digits.
+        $default_num = $order->payment_details['cc_number'];
+    }
+
+    // Set up the card number on the credit card form.
+    $form['cc_number'] = array(
+        '#type'          => 'textfield',
+        '#title'         => t('Card number'),
+        '#attributes'    => array('autocomplete' => 'off','Class' => 'inovio_credit_card_no'),
+        '#size'          => 20,
+        '#maxlength'     => 19,
+    );
+
+
+    $month = isset($order->payment_details['cc_exp_month']) ? $order->payment_details['cc_exp_month'] : 1;
+    $year = isset($order->payment_details['cc_exp_year']) ? $order->payment_details['cc_exp_year'] : date('Y');
+    $form['cc_exp_month'] = uc_select_month(t('Expiration date'), $month);
+    $form['cc_exp_year']  = uc_select_year(t('Expiration year'), $year);
+
+    // Set up the default CVV  on the credit card form.
+    if (isset($_SESSION['clear_cc']) || empty($order->payment_details['cc_cvv'])) {
+        $default_cvv = NULL;
+    }
+    elseif (!uc_inovio_valid_cvv($order->payment_details['cc_cvv'])) {
+        // Display the CVV as is if it does not validate so it can be corrected.
+        $default_cvv = $order->payment_details['cc_cvv'];
+    }
+    else {
+        // Otherwise mask it with dashes.
+        $default_cvv = $order->payment_details['cc_cvv'];
+    }
+
+    $form['cc_cvv'] = array(
+        '#type'          => 'password',
+        '#title'         => t('CVV'),
+        '#default_value' => $default_cvv,
+        '#attributes'    => array('autocomplete' => 'off', 'Class'=>'inovio_cvv_no'),
+        '#size'          => variable_get('uc_credit_amex', TRUE) ? 4 : 3,
+        '#maxlength'     => variable_get('uc_credit_amex', TRUE) ? 4 : 3,
+    );
+
+    
+    unset($_SESSION['clear_cc']);
+
+    
+    return $form;
+}
+
+
+/**
+ * Implements hook_form_FORM_ID_alter() for uc_cart_checkout_review_form().
+ */
+function uc_inovio_form_uc_cart_checkout_review_form_alter(&$form, &$form_state) {
+
+    // Add submit handler to preserve CC details for the back button and
+    // failed order submissions.
+    $form['actions']['back']['#submit'][] = 'uc_inovio_cart_review_back_submit';
+
+    // Reconstruct the submit handler array for before and after processing.
+    $submit   = array_merge(array('uc_inovio_cart_review_pre_form_submit'), $form['#submit']);
+    $submit[] = 'uc_inovio_cart_review_post_form_submit';
+
+    $form['#submit'] = $submit;
+
+    unset($_SESSION['sescrd']);
+}
+
+
+/**
+ * Caches the encrypted CC data on the review order form for processing.
+ */
+function uc_inovio_cart_review_back_submit($form, &$form_state) {
+    $session_card_data  = base64_decode($_POST['sescrd']);
+    $_SESSION['sescrd'] = $session_card_data;
+    uc_inovio_cache('save', $session_card_data);
+}
+
+/**
+ * Caches the encrypted CC data on the review order form for processing.
+ */
+function uc_inovio_cart_review_pre_form_submit($form, &$form_state) {
+    $session_card_data  = base64_decode($_POST['sescrd']);
+    $_SESSION['sescrd'] = $session_card_data;
+    uc_inovio_cache('save', $session_card_data);
+}
+
+
+/**
+ * Clears the temporary CC data if the review order form submits.
+ */
+function uc_inovio_cart_review_post_form_submit($form, &$form_state) {
+
+    if (!empty($_SESSION['uc_checkout'][$_SESSION['cart_order']]['do_complete'])) {
+        // Otherwise stuff it back in the session for the next pageload.
+        unset($_SESSION['sescrd']);
+    }
+    
+}
+
+
+/**
+ * Builds the "Process Card" button on the order view.
+ *
+ * @see uc_inovio_order_view_form_submit()
+ */
+function uc_inovio_order_view_form($form, &$form_state, $order_id) {
+    $form['order_id'] = array(
+        '#type'  => 'hidden',
+        '#value' => $order_id,
+    );
+    $form['actions'] = array('#type' => 'actions');
+    $form['actions']['submit'] = array(
+        '#type'  => 'submit',
+        '#value' => t('Process card'),
+    );
+    return $form;
+}
+
+/**
+ * Submit handler for order view form.
+ *
+ * @see uc_inovio_order_view_form()
+ */
+function uc_inovio_order_view_form_submit($form, &$form_state) {
+    $form_state['redirect'] = url('admin/store/orders/' . $form_state['values']['order_id'] . '/credit');
+}
+
+/**
+ * Returns a credit card number with appropriate masking.
+ */
+function uc_inovio_display_number($number) {
+    if (strlen($number) == 4) {
+        return t('(Last 4) ') . $number;
+    }
+    return str_repeat('X', 12) . substr($number, -4);
+}
+
+
+/**
+ * Validates a credit card number during checkout.
+ *
+ */
+function _uc_inovio_valid_card_number($number) {
+    $id = substr($number, 0, 1);
+    if (($id == 3 && !variable_get('uc_credit_amex', TRUE)) ||
+        ($id == 4 && !variable_get('uc_credit_visa', TRUE)) ||
+        ($id == 5 && !variable_get('uc_credit_mastercard', TRUE)) ||
+        ($id == 6 && !variable_get('uc_credit_discover', TRUE)) ||
+        !ctype_digit($number)) {
+        return FALSE;
+    }
+
+    $total = 0;
+    for ($i = 0; $i < strlen($number); $i++) {
+        $digit = substr($number, $i, 1);
+        if ((strlen($number) - $i - 1) % 2) {
+            $digit *= 2;
+            if ($digit > 9) {
+                $digit -= 9;
+            }
+        }
+        $total += $digit;
+    }
+
+    if ($total % 10 != 0) {
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+/**
+ * Validates an expiration date on a card.
+ *
+ * @param $month
+ *   The 1 or 2-digit numeric representation of the month, i.e. 1, 6, 12.
+ * @param $year
+ *   The 4-digit numeric representation of the year, i.e. 2008.
+ *
+ * @return
+ *   TRUE for non-expired cards, FALSE for expired.
+ */
+function uc_inovio_valid_card_expiration($month, $year) {
+    if ($year < date('Y')) {
+        return FALSE;
+    }
+    elseif ($year == date('Y')) {
+        if ($month < date('n')) {
+          return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/**
+ * Validates a CVV number during checkout.
+ */
+function uc_inovio_valid_cvv($cvv) {
+    $digits = array();
+
+    if (variable_get('uc_credit_visa', TRUE) ||
+        variable_get('uc_credit_mastercard', TRUE) ||
+        variable_get('uc_credit_discover', TRUE)) {
+        $digits[] = 3;
+    }
+    if (variable_get('uc_credit_amex', TRUE)) {
+        $digits[] = 4;
+    }
+    // Fail validation if it's non-numeric or an incorrect length.
+    if (!is_numeric($cvv) || (strlen((int)$cvv) != strlen($cvv)) || (count($digits) > 0 && !in_array(strlen($cvv), $digits))) {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+/**
+ * Implements hook_uc_order().
+ */
+function uc_inovio_uc_order($op, $order, $arg2) {
+    global $base_url;
+    global $base_url;
+    global $user;
+
+    // Set up the encryption key and object for saving and loading.
+    if (isset($order->payment_method) && $order->payment_method == 'inovio' && ($op == 'save' || $op == 'load')) {
+      // Log an error if encryption isn't configured properly.
+      if (!uc_inovio_encryption_key()) {
+        watchdog('uc_inovio', 'Credit card encryption must be set up to process credit cards.');
+      }
+    }
+    // echo $op;
+    switch ($op) {
+        case 'submit':
+           
+                if (isset($order->payment_method) && $order->payment_method == 'inovio') {
+                  // Clear out that session variable denoting this as a CC paid order.
+                  unset($_SESSION['cc_pay']);
+
+                  // Process CC transactions when an order is submitted after review.
+                  $gateway_id = uc_inovio_default_gateway();
+
+                  $data = array(
+                      'txn_type' => variable_get('uc_pg_' . $gateway_id . '_cc_txn_type', UC_INOVIO_AUTH_CAPTURE),
+                  );        
+
+                  $pass = uc_payment_process_payment('credit', $order->order_id, $order->order_total, $data, FALSE, 'inovio', FALSE);
+
+                  // If the payment failed, store the data back in the session and
+                  // halt the checkout process.
+                  if (!$pass) {
+                      $message = variable_get('uc_credit_fail_message', t('We were unable to process payment. Please verify your details and try again.  If the problem persists, contact us to complete your order.'));
+                      return array(array('pass' => FALSE, 'message' => $message));
+                  }
+              }
+            
+            break;
+
+        case 'save':
+            if (isset($order->payment_method) && $order->payment_method == 'inovio' && !empty($order->payment_details['cc_number'])) {
+                _uc_inovio_save_cc_data_to_order($order->payment_details, $order->order_id);
+            }
+            break;
+
+        case 'load': 
+          
+              if (isset($order->payment_method) && $order->payment_method == 'inovio') {
+                  // display and usset the message of successful refund
+                  if (isset($_SESSION['msg']) && !empty($_SESSION['msg'])) {
+                      drupal_set_message( $_SESSION['msg'] );
+                      unset($_SESSION['msg']);
+                  }
+
+                  // Load the CC details from the credit cache if available.
+                  $order->payment_details = uc_inovio_cache('load');
+
+                  // Otherwise load any details that might be stored in the data array.
+                  if (empty($order->payment_details) && isset($order->data['cc_data'])) {
+                      $order->payment_details = uc_inovio_cache('save', $order->data['cc_data']);
+                  }
+              }
+            break;
+
+        case 'update':
+             if (isset($order->payment_method) && $order->payment_method == 'inovio') {
+               // work with refund
+                 
+                if(!empty($_POST['status']) && ($_POST['status'] === 'inovio_refunded')) {
+
+                        $transaction_id = db_query("SELECT inovio_api_po_id FROM {uc_inovio_refund} WHERE inovio_order_id = :inovio_order_id",
+                                                    array(':inovio_order_id' =>$order->order_id))
+                                                    ->fetchField();
+                       
+                        if (!empty($transaction_id)) {
+                                
+                            $params =   array_merge(
+                                        set_gateway_information(), array(
+                                            'request_ref_po_id' => $transaction_id,
+                                            'credit_on_fail' => 1,
+                                            'li_value_1' => $order->order_total
+                                        )
+                                    );
+                            $parse_result = set_apimethod_and_getresponse('ccreverse', $params);
+                            // Log for refund functionality
+                            uc_inovio_logger($parse_result);
+                            if(!empty($parse_result->TRANS_ID)) {
+                                // Build an admin order comment.
+                                $comment = t("Payment successfully refunded using Inovio payment method -
+                                        Transaction-Id- ".$parse_result->TRANS_ID);
+                                $comment = !empty($_POST['order_comment']) ? $_POST['order_comment'] : $comment;
+                                // Save the comment to the order and change status.
+                                uc_order_comment_save($order->order_id, $user->uid, $comment, 'order', $_POST['status']);
+                                db_update('uc_orders')->fields(array(
+                                    'order_status' => $_POST['status'],
+                                ))->condition('order_id', $order->order_id, '=')->execute();
+                                   // Build an admin order comment.
+                                $comment = t("Payment successfully refunded via inovio payment method </ br>
+                                    Transaction-Id: ".$parse_result->TRANS_ID);
+                                // Save the comment to the order.
+                                uc_order_comment_save($order->order_id, $user->uid, $comment, 'admin');
+                        
+                        
+                                $data    = serialize(array(
+                                            'module' => 'uc_inovio',
+                                            'txn_id' => $parse_result->TRANS_ID
+                                        ));
+                            
+                            $comment = t('Message: @Message<br />Txn ID: @id', 
+                                        array('@Message' => "Refund successfully completed using inovio payment method",
+                                        '@id' => $parse_result->TRANS_ID
+                                    ));
+
+                            // Save log for order change.
+                            db_insert('uc_payment_receipts')->fields(array(
+                                'order_id' => $order->order_id,
+                                'method'   => t('Inovio'),
+                                'amount'   => $parse_result->TRANS_VALUE,
+                                'uid'      => $user->uid,
+                                'data'     => $data,
+                                'comment'  => $comment,
+                                'received' => REQUEST_TIME
+                            ))->execute();
+
+                            unset($_SESSION['flag']);
+                            unset($_SESSION['ch_status']);
+                            $_SESSION['msg'] = 'Your payment has been refunded successfully!';
+                            drupal_goto("/admin/store/orders/" . $order->order_id);
+                            }
+                            drupal_set_message("Order already reversed or cancell", "error");
+                            return FALSE;
+                        }
+                        drupal_set_message("There is no transaction id for refund", "error");
+                        return FALSE;
+                    }
+                }
+        break; 
+ 
+    }
+    // die('stop');
+}
+
+/**
+ * Retrieves the ID of the inovio credit card gateway.
+ *
+ * @return
+ *   A string containing the ID of the inovio gateway or FALSE if none exists
+ *   or none have valid credit callbacks.
+ */
+function uc_inovio_default_gateway() {
+    // Get an array of enabled payment gateways available for the payment method.
+    $gateways = _uc_payment_gateway_list('credit', TRUE);
+
+    // Return FALSE if we found no gateways.
+    if (empty($gateways)) {
+          return FALSE;
+    }
+
+    // Find the default gateway, or otherwise choose the first available.
+    $gateway = isset($gateways['inovio']) ? $gateways['inovio'] : reset($gateways);
+
+    // Return FALSE if the credit callback does not exist.
+    return function_exists($gateway['credit']) ? $gateway['id'] : FALSE;
+}
+
+
+/**
+ * Loads the key for CC number encryption from a file.
+ *
+ * Path to key file is stored in system variable 'uc_credit_encryption_path'.
+ * Key file name is stored in constant UC_CREDIT_KEYFILE_NAME.
+ *
+ * @return
+ *   FALSE if no encryption key is found.
+ */
+function uc_inovio_encryption_key() {
+    static $key = FALSE;
+
+    if ($key === TRUE) {
+        $key_file = variable_get('uc_credit_encryption_path', '') . '/' . UC_INOVIO_KEYFILE_NAME;
+        $contents = @file_get_contents($key_file);
+
+        if (strlen($contents) == 32) {
+            $key = $contents;
+        }
+    }
+
+    return $key;
+}
+
+/**
+ * Saves a CC data array to an order's data array.
+ */
+function _uc_inovio_save_cc_data_to_order($cc_data, $order_id) {
+  // Save only some limited, PCI compliant data.
+  $cc_data['cc_number'] = substr($cc_data['cc_number'], -4);
+  unset($cc_data['cc_cvv']);
+
+  // Load up the existing data array.
+  $data = db_query("SELECT data FROM {uc_orders} WHERE order_id = :id", array(':id' => $order_id))->fetchField();
+  
+  $data = unserialize($data);
+
+  // Stuff the serialized and encrypted CC details into the array.
+  $crypt = new UbercartEncryption();
+  $data['cc_data'] = $crypt->encrypt(uc_inovio_encryption_key(), base64_encode(serialize($cc_data)));
+  uc_store_encryption_errors($crypt, 'uc_inovio');
+
+  // Save it again.
+  db_update('uc_orders')
+    ->fields(array('data' => serialize($data)))
+    ->condition('order_id', $order_id)
+    ->execute();
+}
+
+
+/**
+ * Logs the capture of a prior authorization to an order's data array.
+ *
+ * @param $order_id
+ *   The order associated with the credit card capture.
+ * @param $auth_id
+ *   The payment service's ID for the authorization that was captured.
+ *
+ * @return
+ *   The entire updated data array for the order or FALSE to indicate the
+ *   specified authorization was not found.
+ */
+function uc_inovio_log_prior_auth_capture($order_id, $auth_id) {
+    // Load the existing order data array.
+    $data = db_query("SELECT data FROM {uc_orders} WHERE order_id = :id", array(':id' => $order_id))->fetchField();
+    $data = unserialize($data);
+
+    // Return FALSE if we can't find the authorization.
+    if (empty($data['cc_txns']['authorizations'][$auth_id])) {
+      return FALSE;
+    }
+
+    // Otherwise log the capture timestamp to the authorization.
+    $data['cc_txns']['authorizations'][$auth_id]['captured'] = REQUEST_TIME;
+
+    // Save the updated data array to the database.
+    db_update('uc_orders')
+      ->fields(array('data' => serialize($data)))
+      ->condition('order_id', $order_id)
+      ->execute();
+
+    return $data;
+}
+
+/**
+ * Caches CC details on a pageload for use in various functions.
+ *
+ * @param $op
+ *   The cache operation to perform; either 'save', 'load', or 'clear'.
+ * @param $data
+ *   The encrypted, serialized string containing the CC data.
+ *
+ * @return
+ *   An array of credit card details.
+ */
+function uc_inovio_cache($op, $data = NULL, $encrypted = TRUE) {
+    // The CC data will be stored in this static variable.
+    static $cc_cache = array();
+
+    if ($op == 'save') {
+        if ($encrypted) {
+            // Initialize the encryption key and class.
+            $key = uc_inovio_encryption_key();
+            $crypt = new UbercartEncryption();
+
+            // Save the unencrypted CC details for the duration of this request.
+            // In recent versions, we base64_encode() the payment details before
+            // encrypting. We can detect encoded data by the lack of colons,
+            // due to base64's limited character set.
+            $data = $crypt->decrypt($key, $data);
+            if (strpos($data, ':') === FALSE) {
+                $data = base64_decode($data);
+            }
+            $cc_cache = @unserialize($data);
+        }
+        else {
+            $cc_cache = $data;
+        }
+    }
+    elseif ($op == 'clear') {
+        $cc_cache = array();
+    }
+    return $cc_cache;
+}
+
+/************Core SDK implementation********/
+
+/**
+ * Include inovio payment method core SDK.
+ * 
+ * @param NULL
+ */
+function include_core_class() {
+    // Include core SDK claass
+    $file_folder = dirname(__FILE__) . '/inovio-cc/';
+    $class_files = scandir($file_folder);
+    try {
+
+        if ($class_files > 0) {
+
+            foreach ($class_files as $files) {
+
+                if (preg_match('/class-inovio?/', $files)) {
+                    include_once( $file_folder . $files );
+                }
+            }
+        } else {
+            throw new Exception("Please contact to your service provider.");
+        }
+    } catch (Exception $ex) {
+        drupal_set_message( $ex->getMessage(), 'error' );
+    }
+}
+
+/**
+* Set method for coder SDK and get response
+* $requestParams
+* @return string $parse_result 
+*/
+function set_apimethod_and_getresponse($methodName = NULL, $requestParams = []) {
+  // Include core classes
+  include_core_class();
+
+  $configservices = new InovioServiceConfig;
+  // Create connection for Inovio Processor.
+  $processors = new InovioProcessor();
+  // Create connection for InovioConnections.
+  $connections = new InovioConnection();
+  $configservices->serviceConfig($requestParams, $connections);
+  $processors->setServiceConfig($configservices);
+  $response = $processors->setMethodName($methodName)->getResponse();
+
+  return json_decode($response);
+}
+
+ /**
+ * Use to validate mercahnt information
+ * 
+ * @param NULL
+ * @return TRUE ? FALSE
+ */
+function merchant_authenticate() {
+    $parse_result = set_apimethod_and_getresponse('authenticate', set_gateway_information());
+    uc_inovio_logger($parse_result);
+    if ($parse_result->SERVICE_RESPONSE != 100) {
+
+        return FALSE;
+    } else {
+
+        return TRUE;
+    }
+}
+
+/**
+ * Use to set Inovio initial requeired parameters
+ * 
+ * @param NULL 
+ * @return $requestParams
+ */
+function set_gateway_information() {
+
+    $requestParams = [
+        'site_id'      => variable_get('uc_inovio_site_id'),
+        'end_point'    => variable_get('uc_inovio_api_endpoint'),
+        'req_username' => variable_get('uc_inovio_req_username'),
+        'req_password' => variable_get('uc_inovio_req_password'),
+        'request_response_format' => 'json'
+    ];
+
+    $finalRequestParams = [];
+      
+        foreach ($requestParams as $reqKey => $reqParamVal) {
+          if (empty($requestParams[$reqKey])) {
+              drupal_set_message('Somethig went wrong, please contact to your service provider.');
+              exit;   
+          }
+
+          $finalRequestParams[$reqKey] = trim($reqParamVal);
+      }
+    
+      return $finalRequestParams;
+}
+
+/**
+* Use to get advance fields
+* 
+* @param NULL
+* @return array $advanceParams
+*/
+function get_advaceparam() {
+
+  return $advanceParams = [
+        variable_get('uc_inovio_apikey1') => variable_get('uc_inovio_apivalue1'),
+        variable_get('uc_inovio_apikey2') => variable_get('uc_inovio_apivalue2'),
+        variable_get('uc_inovio_apikey3') => variable_get('uc_inovio_apivalue3'),
+        variable_get('uc_inovio_apikey4') => variable_get('uc_inovio_apivalue4'),
+        variable_get('uc_inovio_apikey5') => variable_get('uc_inovio_apivalue5'),
+        variable_get('uc_inovio_apikey6') => variable_get('uc_inovio_apivalue6'),
+        variable_get('uc_inovio_apikey7') => variable_get('uc_inovio_apivalue7'),
+        variable_get('uc_inovio_apikey8') => variable_get('uc_inovio_apivalue8'),
+        variable_get('uc_inovio_apikey9') => variable_get('uc_inovio_apivalue9'),
+        variable_get('uc_inovio_apikey10')=> variable_get('uc_inovio_apivalue10')
+  ];
+}
+/**
+* Use to get product Ids, price and quantity
+* 
+* @return array $finalArray
+*/
+function getProductIds($order) {
+
+    $finalArray = [];
+
+    $finalArray['li_prod_id_1'] = variable_get('uc_inovio_product_id');
+    $finalArray['li_count_1'] = 1;
+    $finalArray['li_value_1'] = $order->order_total;
+
+  return $finalArray;
+}
+
+/**
+* Use to get product subtotal
+* 
+* @return array $finalArray
+*/
+function getSubtotal($order) {
+
+  $subtotalwithOrder = "";
+
+  foreach ((array) $order->line_items as $subtotal) {
+    if($subtotal['type']=="subtotal"){
+        $subtotalwithOrder =  $subtotal["amount"];         
+    }
+  }
+
+  return $subtotalwithOrder;
+}
+
+/**
+* Use to get product total discount
+* 
+* @return array $finalArray
+*/
+function getTotaldiscount($order) {
+
+  $totalDiscount = "";
+
+  foreach ((array) $order->line_items as $totaldiscounts) {
+    if($totaldiscounts['type']=="coupon"){
+        $totalDiscount =  substr($totaldiscounts["amount"], 1);      
+    }
+  }
+
+  return $totalDiscount;
+}
+
+/**
+* Use to set request data to call Inovio APImethod 
+* @param $order
+* @param $amount
+* @param $data
+*/
+function prepareRequestData($order) {
+  global $user;
+  $country_code_billing = uc_get_country_data(array('country_id' => $order->billing_country));
+   $country_code_shipping = uc_get_country_data(array('country_id' => $order->delivery_country));
+
+ 
+ 
+  $request = [
+      "bill_addr" => $order->delivery_street1.' '.$order->delivery_street2,
+      "pmt_numb" => $order->payment_details['cc_number'],
+      "pmt_key" => $order->payment_details['cc_cvv'],
+      "xtl_ip" => (!empty(substr(ip_address(), 0, 15)) && substr(ip_address(), 0, 15) == '::1') ?
+                  '127.0.0.1': substr(ip_address(), 0, 15),
+      "cust_fname" => $order->delivery_first_name,
+      "pmt_expiry" => (str_pad($order->payment_details['cc_exp_month'], 2, '0', STR_PAD_LEFT)) . $order->payment_details['cc_exp_year'],
+      "cust_email" => $order->primary_email,
+      "bill_addr_zip" => $order->billing_postal_code,
+      "bill_addr_city" => $order->delivery_city,
+      "bill_addr_state" => substr(uc_get_zone_code($order->billing_zone), 0, 40),
+      "request_currency" => $order->currency,
+      "bill_addr_country" => $country_code_billing[0]['country_iso_code_3'],
+      "bill_addr" =>  $order->billing_street1. $order->billing_street2,
+      "ship_addr_country" => $country_code_shipping[0]['country_iso_code_3'],
+      "ship_addr_city" => $order->delivery_city,
+      "ship_addr_state" => substr(uc_get_zone_code($order->delivery_zone), 0, 40),
+      "ship_addr_zip" => $order->delivery_postal_code,
+      "ship_addr" =>$order->delivery_street1 . ', '.$order->delivery_street2,
+
+  ];
+  return $request;
+   
+}
+
+
+/**
+ * For single product's quantity should not be greater than 99
+ * 
+ */
+function restrict_quantity($order) {
+    $returnstate = TRUE;
+
+    foreach ((array) $order->products as $product) {
+
+        if ($product->qty > variable_get('uc_inovio_product_quantity_restriction')) {
+            $returnstate = FALSE;
+        }
+    }
+
+    return $returnstate;
+}
+
+/**
+* Inovio custom logger
+*/
+function uc_inovio_logger($var = []) {
+
+    watchdog('uc_inovio',"<pre>".print_r($var,TRUE)."</pre>");
+  
+}
