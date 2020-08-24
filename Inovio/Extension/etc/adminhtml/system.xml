@@ -1,0 +1,148 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2016 Magento. All rights reserved.
+ * See COPYING.txt for license details.
+ */
+-->
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="payment">
+            <group id="inovio_extension" translate="label" type="text" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+                <label>Payment Gateway</label>
+                 <comment><![CDATA[Accept credit cards in your Magento store. ]]></comment>
+               
+                <field id="active" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="1" showInStore="1" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment><![CDATA[Enable Inovio Payment Method.]]></comment>
+                    <config_path>payment/inovio_extension/active</config_path>
+                </field>
+                <field id="title" translate="label" type="text" sortOrder="3" showInDefault="1" showInWebsite="1" showInStore="1" >
+                    <label>Title</label>
+                    <comment><![CDATA[Title will be displayed on Checkout page.]]></comment>
+                    <config_path>payment/inovio_extension/title</config_path>
+                </field>
+                <field id="useccv" translate="label" type="select" sortOrder="4" showInDefault="0" showInWebsite="0" showInStore="0">
+                    <label>Credit Card Verification</label>
+                    <config_path>payment/inovio_extension/useccv</config_path>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <attribute type="shared">1</attribute>
+                </field>
+                <field id="site_id" translate="label" type="text" sortOrder="9" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Site Id</label>
+                    <validate>required-entry</validate>
+                    <config_path>payment/inovio_extension/site_id</config_path>
+                </field>
+
+                <field id="api_username" translate="label" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>API Username</label>
+                    <validate>required-entry</validate>
+                    <config_path>payment/inovio_extension/api_username</config_path>
+                </field>
+
+                <field id="api_password" translate="label" type="text" sortOrder="11" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>API Password</label>
+                    <validate>required-entry</validate>
+                    <config_path>payment/inovio_extension/api_password</config_path>
+                </field>
+
+                <field id="api_url" translate="label" type="text" sortOrder="12" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>API URL</label>
+                    <validate>required-entry</validate>
+                    <config_path>payment/inovio_extension/api_url</config_path>
+                    <comment><![CDATA[The payment Gateway URL.]]></comment>
+                </field>
+                
+
+                <field id="extension_product_quantity_restriction" type="text" translate="label" sortOrder="13" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Maximum qauntity to purchase for single product</label>
+                    <validate>required-entry</validate>
+                    <config_path>payment/inovio_extension/extension_product_quantity_restriction</config_path>
+                    <comment><![CDATA[Maximum qauntity to purchase for single product]]></comment>
+                </field>
+                
+                 <field id="extension_required_product_id" type="text" translate="label" sortOrder="13" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>Set product Id to purchase product</label>
+                    <validate>required-entry</validate>
+                    <comment><![CDATA[Set product Id to purchase product]]></comment>
+                </field>
+                
+                <field id="apikey1" translate="label" type="text" sortOrder="60" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 1</label>
+                </field>
+                 <field id="apivalue1" translate="label" type="text" sortOrder="61" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 1</label>
+                </field>
+
+                 <field id="apikey2" translate="label" type="text" sortOrder="70" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 2</label>
+                </field>
+                 <field id="apivalue2" translate="label" type="text" sortOrder="71" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 2</label>
+                </field>
+
+                <field id="apikey3" translate="label" type="text" sortOrder="80" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 3</label>
+                </field>
+                 <field id="apivalue3" translate="label" type="text" sortOrder="81" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 3</label>
+                </field>
+
+                <field id="apikey4" translate="label" type="text" sortOrder="90" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 4</label>
+                </field>
+                 <field id="apivalue4" translate="label" type="text" sortOrder="91" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 4</label>
+                </field>
+
+                <field id="apikey5" translate="label" type="text" sortOrder="100" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 5</label>
+                </field>
+                 <field id="apivalue5" translate="label" type="text" sortOrder="101" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 5</label>
+                </field>
+
+                <field id="apikey6" translate="label" type="text" sortOrder="200" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 6</label>
+                </field>
+                 <field id="apivalue6" translate="label" type="text" sortOrder="201" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 6</label>
+                </field>
+
+                <field id="apikey7" translate="label" type="text" sortOrder="300" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 7</label>
+                </field>
+                 <field id="apivalue7" translate="label" type="text" sortOrder="301" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 7</label>
+                </field>
+
+                <field id="apikey8" translate="label" type="text" sortOrder="400" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 8</label>
+                </field>
+                 <field id="apivalue8" translate="label" type="text" sortOrder="401" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 8</label>
+                </field>
+
+                <field id="apikey9" translate="label" type="text" sortOrder="500" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 9</label>
+                </field>
+                 <field id="apivalue9" translate="label" type="text" sortOrder="501" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 9</label>
+                </field>
+
+                <field id="apikey10" translate="label" type="text" sortOrder="600" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API KEY 10</label>
+                </field>
+                 <field id="apivalue10" translate="label" type="text" sortOrder="601" showInDefault="1" showInWebsite="1" showInStore="1">
+                    <label>API VALUE 10</label>
+                </field>
+                <field id="debug_log" translate="label" type="select" sortOrder="700" showInDefault="1" showInWebsite="1" showInStore="0" canRestore="1">
+                    <label>Debug Log</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <config_path>payment/inovio_extension/debug_log</config_path>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

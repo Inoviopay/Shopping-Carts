@@ -1,0 +1,6 @@
+<?xml version="1.0" ?>
+<schema xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:framework:Setup/Declaration/Schema/etc/schema.xsd">
+	<table name="sales_order">
+		<column comment="cust id" length="255" name="cust_id" nullable="true" xsi:type="varchar"/>
+	</table>
+</schema>
