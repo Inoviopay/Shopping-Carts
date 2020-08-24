@@ -1,0 +1,25 @@
+<?php
+/**
+ * @file
+ * Defines the inovio payment Gateway that lets payment modules interact with Ubercart.
+ *
+ */
+
+use Drupal\uc_order\OrderInterface;
+
+
+/**
+ * Implements hook_uc_payment_gateway().
+ */
+function uc_inovio_uc_payment_gateway() {
+  $gateways['inovio'] = array(
+    'title' => t('inovio'),
+    'description' => t('Process inovio card payments using service of Inovio.'),
+    'settings' => 'uc_inovio_settings_form'  
+  );
+
+  return $gateways;
+}
+
+
+

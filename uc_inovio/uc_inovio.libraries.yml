@@ -1,0 +1,11 @@
+uc_inovio.styles:
+  css:
+    theme:
+      css/uc_inovio.css: {}
+
+uc_inovio.direct:
+  js:
+    js/uc_inovio.js: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
