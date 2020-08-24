@@ -1,0 +1,70 @@
+<script>
+    //<![CDATA[
+    $js = jQuery.noConflict();
+   
+    $js(document).ready(function(){
+    // restrict enter numeric only
+    $js(document).on("keypress", "#inovio_payment_cc_number, #inovio_payment_cc_cid",function(e) {
+        return (e.which != 8 && e.which != 0 && (e.which < 48 || e.which > 57)) ? false : true;
+    });
+     // restrict right click
+    $js(document).on("contextmenu", "#inovio_payment_cc_number, #inovio_payment_cc_cid",function(e){
+    return false;
+    });
+    // restrict cust copy paste
+    $js(document).bind("cut copy paste", "#inovio_payment_cc_number, #inovio_payment_cc_cid", function(e) {
+      e.preventDefault();
+    });
+    });
+ //]]>
+
+</script>
+<ul class="form-list" id="payment_form_<?php echo $this->getMethodCode(); ?>" style="display:none;">
+       <li>
+        <label for="<?php echo $this->getMethodCode(); ?>_cc_type" class="required"><em>*</em><?php echo $this->__('Credit Card Type') ?></label>
+        <div class="input-box">
+            <select id="<?php echo $this->getMethodCode(); ?>_cc_type" name="payment[cc_type]" class="required-entry validate-cc-type-select">
+                <option value=""><?php echo $this->__('--Please Select--')?></option>
+            <?php $_ccType = $this->getInfoData('cc_type');?>
+            <?php foreach ($this->getCcAvailableTypes() as $_typeCode => $_typeName): ?>
+                <option value="<?php echo $_typeCode ?>"<?php if($_typeCode==$_ccType): ?> selected="selected"<?php endif ?>><?php echo $_typeName ?></option>
+            <?php endforeach ?>
+            </select>
+        </div>
+    </li>
+     <li>
+        <label for="<?php echo $this->getMethodCode(); ?>_cc_number" class="required"><em>*</em><?php echo $this->__('Credit Card Number') ?></label>
+        <div class="input-box">
+            <input type="text" id="<?php echo $this->getMethodCode(); ?>_cc_number" name="payment[cc_number]" title="<?php echo Mage::helper('core')->quoteEscape($this->__('Credit Card Number')) ?>" class="input-text validate-cc-number validate-cc-type" value="" maxlength="16" />
+        </div>
+    </li>
+    <li id="<?php echo $this->getMethodCode(); ?>_cc_type_exp_div">
+        <label for="<?php echo $this->getMethodCode(); ?>_expiration" class="required"><em>*</em><?php echo $this->__('Expiration Date') ?></label>
+        <div class="input-box">
+            <div class="v-fix">
+                <select id="<?php echo $this->getMethodCode(); ?>_expiration" name="payment[cc_exp_month]" class="month validate-cc-exp required-entry">
+                <?php $_ccExpMonth = $this->getInfoData('cc_exp_month') ?>
+                <?php foreach ($this->getCcMonths() as $k=>$v): ?>
+                    <option value="<?php echo $k?$k:'' ?>"<?php if($k==$_ccExpMonth): ?> selected="selected"<?php endif ?>><?php echo $v ?></option>
+                <?php endforeach ?>
+                </select>
+            </div>
+            <div class="v-fix">
+                <?php $_ccExpYear = $this->getInfoData('cc_exp_year') ?>
+                <select id="<?php echo $this->getMethodCode(); ?>_expiration_yr" name="payment[cc_exp_year]" class="year required-entry">
+                <?php foreach ($this->getCcYears() as $k=>$v): ?>
+                    <option value="<?php echo $k?$k:'' ?>"<?php if($k==$_ccExpYear): ?> selected="selected"<?php endif ?>><?php echo $v ?></option>
+                <?php endforeach ?>
+                </select>
+            </div>
+        </div>
+    </li>
+    <li id="<?php echo $this->getMethodCode(); ?>_cc_type_cvv_div">
+        <label for="<?php echo $this->getMethodCode(); ?>_cc_cid" class="required"><em>*</em><?php echo $this->__('Card Verification Number') ?></label>
+        <div class="input-box">
+            <div class="v-fix">
+                <input type="password" title="<?php echo $this->__('Card Verification Number') ?>" class="input-text cvv required-entry validate-cc-cvn" id="<?php echo $this->getMethodCode(); ?>_cc_cid" name="payment[cc_cid]" value="" maxlength="4" />
+            </div>
+        </div>
+    </li>
+</ul>

@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <modules>
+        <Inovio_Payment>
+            <version>0.0.1</version>
+        </Inovio_Payment>
+    </modules>
+
+    <default>
+        <payment>
+            <inovio_payment>
+                <active>1</active>
+                <model>inovio_payment/pay</model>
+                <order_status>processing</order_status>
+                <title>Inovio Payment Gateway</title>
+                <cctypes>AE,VI,MC,DI</cctypes>
+                <payment_action>authorize_capture</payment_action>
+                <extension_product_quantity_restriction>99</extension_product_quantity_restriction>
+            </inovio_payment>
+        </payment>
+    </default>
+
+    <global>
+        <blocks>
+            <inovio_payment>
+                <class>Inovio_Payment_Block</class>
+            </inovio_payment>
+        </blocks>
+
+        <models>
+            <inovio_payment>
+                <class>Inovio_Payment_Model</class>
+            </inovio_payment>
+        </models>
+
+        <resources>
+            <inovio_payment_setup>
+                <setup>
+                    <module>Inovio_Payment</module>
+                </setup>
+            </inovio_payment_setup>
+        </resources>
+
+        <helpers>
+            <inovio_payment>
+                <class>Inovio_Payment_Helper</class>
+            </inovio_payment>
+        </helpers>
+
+    </global>
+
+    <frontend>
+        <routers>
+            <inovio_payment>
+                <use>standard</use>
+                <args>
+                    <module>Inovio_Payment</module>
+                    <frontName>inovio_payment</frontName>
+                </args>
+            </inovio_payment>
+        </routers>
+    </frontend>
+</config>

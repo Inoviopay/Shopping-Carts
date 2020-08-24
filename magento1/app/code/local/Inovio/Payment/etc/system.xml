@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <sections>
+        <payment>
+            <groups>
+                <inovio_payment translate="label" module="inovio_payment">
+                    <label>Inovio Payment Gateway</label>
+                    <sort_order>1</sort_order>
+                    <show_in_default>1</show_in_default>
+                    <show_in_website>1</show_in_website>
+                    <show_in_store>1</show_in_store>
+                    <fields>
+                        <active translate="label">
+                            <label>Enabled</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>10</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </active>
+                        <title translate="label">
+                            <label>Title</label>
+                            <frontend_type>text</frontend_type>
+                            <validate>required-entry</validate>
+                            <sort_order>20</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>1</show_in_store>
+                        </title>
+                        <order_status translate="label">
+                            <label>New Order Status</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_order_status</source_model>
+                            <sort_order>30</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </order_status>
+
+                        <site_id translate="label">
+                            <label>Site Id</label>
+                            <frontend_type>Text</frontend_type>
+                            <validate>required-entry</validate>
+                            <sort_order>40</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </site_id>
+                        <api_username translate="label">
+                            <label>API Username</label>
+                            <validate>required-entry</validate>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>41</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </api_username>
+                        <api_password translate="label">
+                            <label>API Password</label>
+                            <frontend_type>Text</frontend_type>
+                            <validate>required-entry</validate>
+                            <sort_order>42</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </api_password>
+                        <api_url translate="label">
+                            <label>API URL</label>
+                            <frontend_type>Text</frontend_type>
+                            <validate>required-entry</validate>
+                            <sort_order>43</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </api_url>
+                        <extension_product_quantity_restriction translate="label">
+                            <label>Maximum quantity to purchase for single product</label>
+                            <frontend_type>Text</frontend_type>
+                            <validate>required-entry</validate>
+                            <sort_order>45</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </extension_product_quantity_restriction>
+                        <extension_required_product_id translate="label">
+                            <label>Set product Id to purchase product</label>
+                            <frontend_type>Text</frontend_type>
+                            <validate>required-entry</validate>
+                            <sort_order>46</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </extension_required_product_id>
+                    
+                        <apikey1 translate="label">
+                            <label>API KEY 1</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>47</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey1>
+                        <apivalue1 translate="label">
+                            <label>API VALUE 1</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>48</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue1>
+                        <apikey2 translate="label">
+                            <label>API KEY 2</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>49</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey2>
+                        <apivalue2 translate="label">
+                            <label>API VALUE 2</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>50</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue2>
+                        <apikey3 translate="label">
+                            <label>API KEY 3</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>51</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey3>
+                        <apivalue3 translate="label">
+                            <label>API VALUE 3</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>52</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue3>
+                        <apikey4 translate="label">
+                            <label>API KEY 4</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>53</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey4>
+                        <apivalue4 translate="label">
+                            <label>API VALUE 4</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>54</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue4>
+                        <apikey5 translate="label">
+                            <label>API KEY 5</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>55</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey5>
+                        <apivalue5 translate="label">
+                            <label>API VALUE 5</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>56</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue5>
+                        <apikey6 translate="label">
+                            <label>API KEY 6</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>57</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey6>
+                        <apivalue6 translate="label">
+                            <label>API VALUE 6</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>58</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue6>
+                        <apikey7 translate="label">
+                            <label>API KEY 7</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>59</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey7>
+                        <apivalue7 translate="label">
+                            <label>API VALUE 7</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>60</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue7>
+                         <apikey8 translate="label">
+                            <label>API KEY 8</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>61</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey8>
+                        <apivalue8 translate="label">
+                            <label>API VALUE 8</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>62</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue8>
+                        <apikey9 translate="label">
+                            <label>API KEY 9</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>63</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey9>
+                         <apivalue9 translate="label">
+                            <label>API VALUE 9</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>64</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue9>
+                        <apikey10 translate="label">
+                            <label>API KEY 10</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>65</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apikey10>
+                         <apivalue10 translate="label">
+                            <label>API VALUE 10</label>
+                            <frontend_type>Text</frontend_type>
+                            <sort_order>66</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </apivalue10>
+                        <sort_order translate="label">
+                            <label>Sort Order</label>
+                            <frontend_type>text</frontend_type>
+                        </sort_order>
+                        <sort_order>100</sort_order>
+                        <show_in_default>1</show_in_default>
+                        <show_in_website>1</show_in_website>
+                        <show_in_store>0</show_in_store>
+                         <activelog translate="label">
+                            <label>Enable Log</label>
+                            <frontend_type>select</frontend_type>
+                            <source_model>adminhtml/system_config_source_yesno</source_model>
+                            <sort_order>67</sort_order>
+                            <show_in_default>1</show_in_default>
+                            <show_in_website>1</show_in_website>
+                            <show_in_store>0</show_in_store>
+                        </activelog>
+                    </fields>
+                </inovio_payment>
+            </groups>
+        </payment>
+    </sections>
+</config>
