@@ -1,0 +1,15 @@
+#woocommerce_inoviodirectmethod_advancetab+.form-table tbody tr {
+    width: 48%;
+    margin: 0 1%;
+    float: left;
+}
+
+#woocommerce_inoviodirectmethod_advancetab+.form-table tbody tr td .input-text {
+    width: 20em;
+}
+
+@media only screen and (max-width: 480px) {
+    #woocommerce_inoviodirectmethod_advancetab+.form-table tbody tr td .input-text {
+        width: 8em;
+    }
+}
