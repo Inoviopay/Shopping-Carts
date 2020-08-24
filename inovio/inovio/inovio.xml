@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<extension version="3.0.0" type="plugin" group="vmpayment">
+    <name>Inovio payment Gateway</name>
+    <creationDate>19 April 2017</creationDate>
+    <author>The Inovio Development Team</author>
+    <authorUrl></authorUrl>
+    <copyright>Copyright (C) 2017 Inovio Team. All rights reserved.</copyright>
+    <version>3.0.0</version>
+    <description>Inovio Payment Gateway is extention of VirtueMart</description>
+    <files>
+        <filename plugin="inovio">inovio.php</filename>
+        <filename plugin="inovio">bootstrap.php</filename>
+        <folder>inovio</folder>
+        <folder>inoviocore</folder>
+        <folder>language</folder>
+    </files>
+    <vmconfig>
+        <fields name="params">
+            <fieldset name="basic" addfieldpath="/plugins/vmpayment/inovio/inovio/fields">
+                <field type="spacer" placeholdert="VMPAYMENT_INOVIO_AIM" level="level1"/>
+                <field type="vmtitle" placeholdert="VMPAYMENT_INOVIO_TITLE" />
+                <field name="site_id" type="text"  placeholder="Site URL" label="VMPAYMENT_INOVIO_SITEID" />
+                <field name="username" type="text" placeholdert="" label="VMPAYMENT_INOVIO_USERNAME"/>
+                <field name="password" type="text" placeholdert="" label="VMPAYMENT_INOVIO_PASSWORD" />
+                <field name="api_url" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIURL" />
+                <field name="inovio_product_id" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_PRODUCT_ID" />
+                <field name="inoviodebug" type="radio" default="0" label="VMPAYMENT_INOVIO_DEBUGLOG"
+                       description="VMPAYMENT_INOVIODEBUG_DEBUG_DESC">
+                    <option value="0">COM_INOVIO_VIRTUEMART_NO</option>
+                    <option value="1">COM_INOVIO_VIRTUEMART_YES</option>
+                </field>
+		<field name="inovio_product_quantity_restriction" type="number"  placeholdert="" label="VMPAYMENT_INOVIO_PRODUCT_RESTRICTION" default="99" />
+                <field type="vmtitle" default="VMPAYMENT_INOVIO_ADVANCE_PARAMS" level="level1"/>
+                <field name="APIkey1" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY1"/>
+                <field name="APIvalue1" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE1"/>
+                <field name="APIkey2" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY2"/>
+                <field name="APIvalue2" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE2"/>
+                <field name="APIkey3" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY3"/>
+                <field name="APIvalue3" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE3"/>
+                <field name="APIkey4" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY4"/>
+                <field name="APIvalue4" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE4"/>
+                <field name="APIkey5" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY5"/>
+                <field name="APIvalue5" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE5"/>
+                <field name="APIkey6" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY6"/>
+                <field name="APIvalue6" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE6"/>
+                <field name="APIkey7" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY7"/>
+                <field name="APIvalue7" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE7"/>
+                <field name="APIkey8" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY8"/>
+                <field name="APIvalue8" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE8"/>
+                <field name="APIkey9" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIKEY9"/>
+                <field name="APIvalue9" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE9"/>
+                <field name="APIkey10" type="text" placeholdert="" label="VMPAYMENT_INOVIO_APIKEY10"/>
+                <field name="APIvalue10" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE10"/>
+                <field name="APIvalue10" type="text"  placeholdert="" label="VMPAYMENT_INOVIO_APIVALUE10"/>
+            </fieldset>
+        </fields>
+    </vmconfig>
+</extension>
