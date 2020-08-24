@@ -1,0 +1,24 @@
+<script type="text/javascript">
+    $(document).ready(function () {
+        //For refund functionality //
+        $(document).on('click', '#button-history', function () {
+            var order_status = $('#input-order-status').val();
+           
+            if ($("#input-order-status").val() == 11) {
+                
+                $.ajax({
+                    url: 'index.php?route=extension/payment/inovio_pay/refundProcess&user_token={{ user_token }}',
+                    type: 'POST',
+                    data: {
+                        orderId :{{order_id}},
+                        comment_status: '{{comment_status}}',
+                        order_status_id: order_status
+                    },
+                    success: function () {
+                       location.reload();
+                    }
+                });
+            }
+        });
+    });
+</script>
